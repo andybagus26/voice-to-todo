@@ -15,8 +15,18 @@ npm run dev          # http://localhost:3000
 npm run dev:https    # https, untuk mencoba mikrofon dari HP di jaringan yang sama
 ```
 
-Mikrofon hanya bekerja di `localhost` atau HTTPS. Dari HP, jalankan `npm run dev:https` lalu buka
-`https://<IP-laptop>:3000` dan terima peringatan sertifikat.
+Mikrofon hanya bekerja di `localhost` atau HTTPS. Untuk mencoba dari HP di Wi-Fi yang sama, buat
+sertifikat lokal yang juga berlaku untuk alamat jaringan laptop (sekali saja, butuh
+[mkcert](https://github.com/FiloSottile/mkcert)):
+
+```bash
+mkcert -cert-file certificates/lan.pem -key-file certificates/lan-key.pem \
+  localhost 127.0.0.1 ::1 "$(scutil --get LocalHostName).local" <IP-laptop>
+npm run dev:https
+```
+
+Lalu buka `https://<nama-laptop>.local:3000` di HP. Agar Safari di iPhone mempercayai sertifikatnya,
+pasang `rootCA.pem` dari `mkcert -CAROOT` di iPhone (jangan pernah membagikan `rootCA-key.pem`).
 
 Halaman bantu saat pengembangan (tidak ada di build produksi untuk `/dev/data`):
 

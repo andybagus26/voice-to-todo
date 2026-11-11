@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "e2e": "playwright test",
-    "dev:https": "next dev --experimental-https"
+    "dev:https": "next dev --experimental-https --experimental-https-key certificates/lan-key.pem --experimental-https-cert certificates/lan.pem"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.8.0",
