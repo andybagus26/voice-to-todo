@@ -27,26 +27,39 @@ Halaman bantu saat pengembangan (tidak ada di build produksi untuk `/dev/data`):
 
 Salin `.env.example` ke `.env.local`. Kunci hanya dibaca di server dan tidak pernah dikirim ke browser.
 
+**Pilihan gratis (Groq untuk semuanya):** buat kunci di https://console.groq.com/keys, lalu isi
+`.env.local`:
+
+```
+GROQ_API_KEY=kunci-anda
+TRANSCRIBE_PROVIDER=groq
+SUMMARY_PROVIDER=groq
+```
+
+Transkripsi memakai `whisper-large-v3`, ringkasan memakai `openai/gpt-oss-120b` dengan JSON ketat.
+Tier gratis punya batas pemakaian; bila habis, aplikasi menampilkan "Terlalu banyak permintaan".
+
 | Variabel | Nilai | Keterangan |
 |---|---|---|
-| `SUMMARY_PROVIDER` | `mock` atau `claude` | Bawaan: `mock` saat pengembangan, `claude` di produksi |
-| `SUMMARY_MODEL` | `claude-haiku-5-5` | Model ringkasan |
-| `ANTHROPIC_API_KEY` | | Wajib bila `claude` |
-| `TRANSCRIBE_PROVIDER` | `mock`, `openai`, `groq` | Bawaan `mock` |
-| `TRANSCRIBE_API_KEY` | | Wajib bila `openai` atau `groq` |
+| `TRANSCRIBE_PROVIDER` | `mock`, `groq`, `openai` | Bawaan `mock` |
+| `SUMMARY_PROVIDER` | `mock`, `groq`, `claude` | Bawaan: `mock` saat pengembangan, `claude` di produksi |
+| `GROQ_API_KEY` | | Dipakai transkripsi dan ringkasan bila `groq` |
+| `ANTHROPIC_API_KEY` | | Wajib bila ringkasan `claude` |
+| `TRANSCRIBE_API_KEY` | | Wajib bila transkripsi `openai` |
+| `TRANSCRIBE_MODEL`, `SUMMARY_MODEL` | | Opsional, mengganti model bawaan |
 
 Dengan penyedia `mock`, audio diabaikan dan hasilnya selalu contoh "Rapat panitia". Di produksi,
 penyedia tiruan ditolak (HTTP 503) kecuali `ALLOW_MOCK_AI=1`.
 
-Status: panggilan ke Claude API dan ke penyedia transkripsi asli **belum pernah dijalankan**;
-keduanya baru diuji dengan klien tiruan.
+Status: panggilan ke Groq, Claude API, dan OpenAI **belum pernah dijalankan** terhadap API asli;
+semuanya baru diuji dengan klien tiruan.
 
 ## Cara kerja
 
 1. **Rekam**: `MediaRecorder` (WebM/Opus, fallback MP4 untuk Safari), berhenti otomatis di 10 menit.
 2. **Simpan**: rekaman dan audionya ditulis ke IndexedDB dalam satu transaksi, sebelum diproses.
 3. **Proses**: audio dikirim ke `POST /api/process`, yang mentranskripsi lalu merangkum dengan
-   Claude (structured outputs, divalidasi zod, dicoba ulang sekali). Server tidak menyimpan apa pun
+   Groq atau Claude (JSON sesuai skema, divalidasi zod, dicoba ulang sekali). Server tidak menyimpan apa pun
    dan tidak mencatat isi transkrip.
 4. **Hasil**: judul, kategori, ringkasan, poin penting, to-do, dan transkrip disimpan di perangkat.
    Tenggat seperti "Jumat" atau "besok" diubah menjadi tanggal absolut berdasarkan tanggal rekaman

@@ -5,7 +5,7 @@ import { SkemaHasilProses, type HasilProses } from "@/lib/hasil";
 import { KATEGORI } from "@/lib/tipe";
 import { formatJam, formatTanggal, kunciHari } from "@/lib/waktu";
 import { hariBerikutnya, hariSetelah, tabelKalender } from "./kalender";
-import { GalatKonfigurasi, tiruanDiizinkan } from "./transcribe";
+import { GalatBatasPenyedia, GalatKonfigurasi, tiruanDiizinkan } from "./transcribe";
 
 export type MasukanRingkasan = {
   transkrip: string;
@@ -107,7 +107,7 @@ export type KlienClaude = {
 export function buatPeringkasClaude(
   klien: KlienClaude = new Anthropic() as unknown as KlienClaude,
 ): Peringkas {
-  const model = process.env.SUMMARY_MODEL ?? "claude-haiku-5-5";
+  const model = process.env.SUMMARY_MODEL || "claude-haiku-5-5";
   return async (masukan) => {
     let sebabTerakhir: unknown;
     for (let percobaan = 0; percobaan < 2; percobaan++) {
@@ -142,6 +142,89 @@ export function buatPeringkasClaude(
   };
 }
 
+/** JSON Schema ketat untuk Groq: semua properti wajib, tanpa properti tambahan. */
+const SKEMA_JSON_GROQ = {
+  type: "object",
+  additionalProperties: false,
+  required: ["title", "category", "summary", "keyPoints", "todos"],
+  properties: {
+    title: { type: "string" },
+    category: { type: "string", enum: [...KATEGORI] },
+    summary: { type: "string" },
+    keyPoints: { type: "array", items: { type: "string" } },
+    todos: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["text", "due"],
+        properties: {
+          text: { type: "string" },
+          due: { type: ["string", "null"] },
+        },
+      },
+    },
+  },
+} as const;
+
+/**
+ * Ringkasan lewat Groq (API berformat OpenAI, tier gratis tersedia) dengan
+ * structured outputs mode ketat. Divalidasi zod, dicoba ulang sekali.
+ *
+ * BELUM DIUJI terhadap API asli: hanya diuji dengan fetch tiruan.
+ */
+export function buatPeringkasGroq(
+  opsi: { kunci: string; model?: string; basis?: string },
+  ambil: typeof fetch = fetch,
+): Peringkas {
+  const model = opsi.model || "openai/gpt-oss-120b";
+  const basis = (opsi.basis ?? "https://api.groq.com/openai/v1").replace(/\/$/, "");
+  return async (masukan) => {
+    let sebabTerakhir: unknown;
+    for (let percobaan = 0; percobaan < 2; percobaan++) {
+      const respons = await ambil(`${basis}/chat/completions`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${opsi.kunci}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: "system", content: SISTEM },
+            { role: "user", content: susunPesan(masukan) },
+          ],
+          response_format: {
+            type: "json_schema",
+            json_schema: { name: "catatan_rekaman", strict: true, schema: SKEMA_JSON_GROQ },
+          },
+          max_completion_tokens: 8192,
+        }),
+        signal: AbortSignal.timeout(60_000),
+      });
+      if (respons.status === 429) throw new GalatBatasPenyedia("Batas ringkasan tercapai");
+      if (!respons.ok) {
+        // Hanya status: badan galat bisa memuat potongan isi permintaan.
+        throw new Error(`Ringkasan gagal dengan status ${respons.status}`);
+      }
+      const data = (await respons.json()) as {
+        choices?: Array<{ message?: { content?: unknown }; finish_reason?: unknown }>;
+      };
+      const isi = data.choices?.[0]?.message?.content;
+      try {
+        if (typeof isi !== "string") throw new Error("Jawaban tanpa isi");
+        const terurai = SkemaKeluaranAI.parse(JSON.parse(isi));
+        return rapikanKeluaran(terurai, masukan.direkamPada);
+      } catch (sebab) {
+        sebabTerakhir = sebab;
+      }
+    }
+    throw new GalatRingkasan("Keluaran model tidak valid setelah dicoba ulang", {
+      cause: sebabTerakhir,
+    });
+  };
+}
+
 /** Peringkas tiruan untuk pengembangan: hasil tetap, tenggat dihitung dari tanggal rekaman. */
 const tiruan: Peringkas = async ({ direkamPada }) => ({
   judul: "Rapat panitia",
@@ -158,7 +241,10 @@ const tiruan: Peringkas = async ({ direkamPada }) => ({
   ],
 });
 
-/** SUMMARY_PROVIDER: "claude" atau "mock". Bawaan: mock saat pengembangan, claude di produksi. */
+/**
+ * SUMMARY_PROVIDER: "groq", "claude", atau "mock".
+ * Bawaan: mock saat pengembangan, claude di produksi.
+ */
 export function pilihPeringkas(): Peringkas {
   const bawaan = process.env.NODE_ENV === "production" ? "claude" : "mock";
   const penyedia = process.env.SUMMARY_PROVIDER ?? bawaan;
@@ -169,5 +255,10 @@ export function pilihPeringkas(): Peringkas {
     return tiruan;
   }
   if (penyedia === "claude") return buatPeringkasClaude();
+  if (penyedia === "groq") {
+    const kunci = process.env.GROQ_API_KEY;
+    if (!kunci) throw new GalatKonfigurasi("GROQ_API_KEY belum diisi");
+    return buatPeringkasGroq({ kunci, model: process.env.SUMMARY_MODEL });
+  }
   throw new GalatKonfigurasi(`Penyedia ringkasan tidak dikenal: ${penyedia}`);
 }

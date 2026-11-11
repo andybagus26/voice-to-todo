@@ -106,7 +106,10 @@ Hal lain yang ditambahkan dan tidak terlihat di Figma:
   transkrip contoh. Claude API tidak punya blok input audio, jadi dipakai penyedia terpisah. Adapter
   untuk API berformat OpenAI (`openai`, `groq`) sudah ada di `server/transcribe.ts`, tetapi belum
   pernah dijalankan terhadap API asli.
-- **Ringkasan Claude belum pernah memanggil API asli.** Logikanya diuji dengan klien tiruan.
+- **Ringkasan belum pernah memanggil API asli**, baik Groq (`openai/gpt-oss-120b`) maupun Claude.
+  Logikanya diuji dengan klien tiruan.
+- **Tier gratis Groq** punya batas permintaan. Bila habis, server membalas 429 dan kartu Gagal
+  menampilkan "Terlalu banyak permintaan".
 - **Batas 10 menit di server** baru ditegakkan lewat ukuran berkas (8 MB) dan durasi yang dilaporkan
   browser. Penegakan dari durasi audio sebenarnya sudah ada di kode, tetapi baru berlaku setelah ada
   penyedia transkripsi asli yang melaporkan durasi.

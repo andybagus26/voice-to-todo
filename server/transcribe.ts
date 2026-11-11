@@ -21,6 +21,9 @@ export type Transkriptor = (masukan: MasukanTranskripsi) => Promise<HasilTranskr
 
 export class GalatKonfigurasi extends Error {}
 
+/** Penyedia AI menolak karena batas pemakaian (HTTP 429), mis. kuota tier gratis habis. */
+export class GalatBatasPenyedia extends Error {}
+
 const TRANSKRIP_TIRUAN =
   "Oke, kita mulai rapatnya. Dana acara masih kurang, jadi kita perlu sponsor tambahan. " +
   "Proposal sponsor harus sudah dikirim ke ketua panitia sebelum Jumat. " +
@@ -74,6 +77,7 @@ export function buatTranskriptorOpenAI(
       body: formulir,
       signal: AbortSignal.timeout(90_000),
     });
+    if (respons.status === 429) throw new GalatBatasPenyedia("Batas transkripsi tercapai");
     if (!respons.ok) {
       // Hanya status: badan galat bisa memuat potongan isi permintaan.
       throw new Error(`Transkripsi gagal dengan status ${respons.status}`);
@@ -98,7 +102,8 @@ export function buatTranskriptorOpenAI(
 
 /**
  * TRANSCRIBE_PROVIDER: "mock" (bawaan), "openai", atau "groq".
- * Penyedia asli butuh TRANSCRIBE_API_KEY; TRANSCRIBE_MODEL dan TRANSCRIBE_BASE_URL opsional.
+ * Penyedia asli butuh TRANSCRIBE_API_KEY (atau GROQ_API_KEY untuk groq);
+ * TRANSCRIBE_MODEL dan TRANSCRIBE_BASE_URL opsional.
  */
 export function pilihTranskriptor(): Transkriptor {
   const penyedia = process.env.TRANSCRIBE_PROVIDER ?? "mock";
@@ -109,8 +114,10 @@ export function pilihTranskriptor(): Transkriptor {
     return tiruan;
   }
   if (penyedia === "openai" || penyedia === "groq") {
-    const kunci = process.env.TRANSCRIBE_API_KEY;
-    if (!kunci) throw new GalatKonfigurasi("TRANSCRIBE_API_KEY belum diisi");
+    // Untuk Groq, satu GROQ_API_KEY cukup untuk transkripsi dan ringkasan.
+    const kunci =
+      process.env.TRANSCRIBE_API_KEY || (penyedia === "groq" ? process.env.GROQ_API_KEY : undefined);
+    if (!kunci) throw new GalatKonfigurasi("Kunci API transkripsi belum diisi");
     const bawaan = PENYEDIA_OPENAI[penyedia];
     return buatTranskriptorOpenAI({
       basis: process.env.TRANSCRIBE_BASE_URL ?? bawaan.basis,

@@ -34,6 +34,7 @@ export const KODE_GALAT = [
   "terlalu-sering",
   "terlalu-panjang",
   "tidak-terdengar",
+  "belum-dikonfigurasi",
   "server",
 ] as const;
 export type KodeGalat = (typeof KODE_GALAT)[number];

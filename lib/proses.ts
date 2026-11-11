@@ -19,6 +19,7 @@ async function kodeDariRespons(respons: Response): Promise<KodeGalat> {
     if (galat === "terlalu-panjang" || galat === "terlalu-besar") return "terlalu-panjang";
     if (galat === "tidak-terdengar") return "tidak-terdengar";
     if (galat === "terlalu-sering") return "terlalu-sering";
+    if (galat === "belum-dikonfigurasi") return "belum-dikonfigurasi";
   } catch {
     // Badan bukan JSON: pakai kode dari status.
   }

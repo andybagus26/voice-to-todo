@@ -3,10 +3,17 @@ import { describe, expect, it, vi } from "vitest";
 import { hariBerikutnya, hariSetelah, tabelKalender } from "./kalender";
 import { prosesPermintaan } from "./proses";
 import { buatPembatas } from "./rate-limit";
-import { buatTranskriptorOpenAI, GalatKonfigurasi, pilihTranskriptor } from "./transcribe";
+import {
+  buatTranskriptorOpenAI,
+  GalatBatasPenyedia,
+  GalatKonfigurasi,
+  pilihTranskriptor,
+} from "./transcribe";
 import {
   buatPeringkasClaude,
+  buatPeringkasGroq,
   GalatRingkasan,
+  pilihPeringkas,
   rapikanKeluaran,
   type KeluaranAI,
   type KlienClaude,
@@ -360,5 +367,99 @@ describe("transkripsi berformat OpenAI", () => {
     vi.stubEnv("ALLOW_MOCK_AI", "1");
     expect(pilihTranskriptor()).toBeTypeOf("function");
     vi.unstubAllEnvs();
+  });
+});
+
+describe("peringkas Groq", () => {
+  const masukan = { transkrip: RAHASIA, direkamPada: RAPAT };
+  const jawabIsi = (isi: unknown, status = 200) =>
+    Response.json({ choices: [{ message: { content: isi }, finish_reason: "stop" }] }, { status });
+
+  it("mengirim skema ketat, prompt dengan tabel tanggal, dan membaca hasilnya", async () => {
+    const ambil = vi.fn<typeof fetch>(async () => jawabIsi(JSON.stringify(KELUARAN)));
+    const hasil = await buatPeringkasGroq({ kunci: "kunci-groq" }, ambil)(masukan);
+    expect(hasil.judul).toBe("Rapat panitia");
+    expect(hasil.tugas[0]).toEqual({ teks: "Kirim proposal sponsor", tenggat: "2026-11-13" });
+
+    const [url, init] = ambil.mock.calls[0];
+    expect(url).toBe("https://api.groq.com/openai/v1/chat/completions");
+    expect((init?.headers as Record<string, string>).Authorization).toBe("Bearer kunci-groq");
+    const badan = JSON.parse(init?.body as string);
+    expect(badan.model).toBe("openai/gpt-oss-120b");
+    expect(badan.response_format.type).toBe("json_schema");
+    expect(badan.response_format.json_schema.strict).toBe(true);
+    const skema = badan.response_format.json_schema.schema;
+    expect(skema.additionalProperties).toBe(false);
+    expect(skema.properties.todos.items.properties.due.type).toEqual(["string", "null"]);
+    expect(skema.properties.category.enum).toEqual(["Rapat", "Kuliah", "Ide"]);
+    expect(badan.messages[1].content).toContain("2026-11-13 = Jumat");
+    expect(badan.messages[1].content).toContain(RAHASIA);
+  });
+
+  it("mencoba sekali lagi bila JSON rusak, lalu menyerah", async () => {
+    const ambil = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(jawabIsi("{bukan json"))
+      .mockResolvedValueOnce(jawabIsi(JSON.stringify(KELUARAN)));
+    await expect(buatPeringkasGroq({ kunci: "k" }, ambil)(masukan)).resolves.toMatchObject({
+      kategori: "Rapat",
+    });
+    expect(ambil).toHaveBeenCalledTimes(2);
+
+    const rusak = vi.fn<typeof fetch>(async () => jawabIsi(null));
+    await expect(buatPeringkasGroq({ kunci: "k" }, rusak)(masukan)).rejects.toBeInstanceOf(
+      GalatRingkasan,
+    );
+    expect(rusak).toHaveBeenCalledTimes(2);
+  });
+
+  it("batas tier gratis (429) menjadi GalatBatasPenyedia, galat lain tanpa isi", async () => {
+    const batas = vi.fn<typeof fetch>(async () => Response.json({}, { status: 429 }));
+    await expect(buatPeringkasGroq({ kunci: "k" }, batas)(masukan)).rejects.toBeInstanceOf(
+      GalatBatasPenyedia,
+    );
+    const mati = vi.fn<typeof fetch>(async () =>
+      Response.json({ error: { message: RAHASIA } }, { status: 500 }),
+    );
+    await expect(buatPeringkasGroq({ kunci: "k" }, mati)(masukan)).rejects.toThrow(
+      "Ringkasan gagal dengan status 500",
+    );
+  });
+
+  it("satu GROQ_API_KEY dipakai transkripsi dan ringkasan; tanpa kunci ditolak", () => {
+    vi.stubEnv("SUMMARY_PROVIDER", "groq");
+    vi.stubEnv("TRANSCRIBE_PROVIDER", "groq");
+    vi.stubEnv("TRANSCRIBE_API_KEY", "");
+    vi.stubEnv("GROQ_API_KEY", "");
+    expect(() => pilihPeringkas()).toThrow(GalatKonfigurasi);
+    expect(() => pilihTranskriptor()).toThrow(GalatKonfigurasi);
+    vi.stubEnv("GROQ_API_KEY", "kunci-groq");
+    expect(pilihPeringkas()).toBeTypeOf("function");
+    expect(pilihTranskriptor()).toBeTypeOf("function");
+    vi.unstubAllEnvs();
+  });
+
+  it("/api/process membalas 429 bila kuota penyedia habis", async () => {
+    const respons = await prosesPermintaan(
+      new Request("http://localhost/api/process", {
+        method: "POST",
+        body: (() => {
+          const f = new FormData();
+          f.set("audio", new File([new Uint8Array(100)], "a.webm", { type: "audio/webm" }));
+          f.set("direkamPada", String(RAPAT));
+          f.set("durasiMs", "1000");
+          return f;
+        })(),
+      }),
+      {
+        pembatas: buatPembatas(10, 60_000),
+        transkriptor: async () => {
+          throw new GalatBatasPenyedia("habis");
+        },
+        catat: () => {},
+      },
+    );
+    expect(respons.status).toBe(429);
+    expect(await respons.json()).toEqual({ galat: "terlalu-sering" });
   });
 });

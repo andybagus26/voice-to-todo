@@ -7,7 +7,12 @@ import {
 } from "@/lib/hasil";
 import { alamatKlien, buatPembatas, type Pembatas } from "./rate-limit";
 import { GalatRingkasan, pilihPeringkas, type Peringkas } from "./summarize";
-import { GalatKonfigurasi, pilihTranskriptor, type Transkriptor } from "./transcribe";
+import {
+  GalatBatasPenyedia,
+  GalatKonfigurasi,
+  pilihTranskriptor,
+  type Transkriptor,
+} from "./transcribe";
 
 /** Kode galat yang dikirim ke browser. Tidak pernah memuat isi transkrip. */
 export type KodeGalatServer =
@@ -122,6 +127,10 @@ export async function prosesPermintaan(
     if (sebab instanceof GalatKonfigurasi) {
       catat("belum-dikonfigurasi", { ...rincian, pesan: sebab.message });
       return galat("belum-dikonfigurasi", 503);
+    }
+    if (sebab instanceof GalatBatasPenyedia) {
+      catat("terlalu-sering", { ...rincian, sumber: "penyedia" });
+      return galat("terlalu-sering", 429, { "Retry-After": "60" });
     }
     if (sebab instanceof GalatRingkasan) {
       catat("ringkasan-gagal", rincian);

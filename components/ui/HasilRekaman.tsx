@@ -50,6 +50,7 @@ const KETERANGAN_GALAT: Partial<Record<KodeGalat, string>> = {
   "terlalu-sering": "Terlalu banyak permintaan. Tunggu sebentar, lalu coba lagi.",
   "terlalu-panjang": "Rekaman melebihi batas 10 menit.",
   "tidak-terdengar": "Tidak ada suara yang terdengar di rekaman ini.",
+  "belum-dikonfigurasi": "Layanan AI belum diatur di server.",
 };
 
 type GagalProps = {
