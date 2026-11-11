@@ -1,0 +1,138 @@
+@import "tailwindcss";
+
+/*
+ * Token desain Voice-to-Todo.
+ * Sumber: Figma BLFoqH9YkGHWzOL1sUxTUT, frame "Komponen" (2:15).
+ * Figma variables kosong, jadi nilai diambil dari komponen.
+ */
+@theme {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  /* Permukaan */
+  --color-latar: #f8fafc;
+  --color-permukaan: #ffffff;
+  --color-garis: #e2e8f0;
+  --color-netral: #f1f5f9;
+  --color-trek: #eef2f6;
+  --color-tirai: rgba(15, 23, 42, 0.4);
+
+  /* Teks */
+  --color-tinta: #0f172a;
+  --color-redup: #64748b;
+  --color-samar: #475569;
+  /* Figma memakai #94a3b8 (2,56:1 di atas putih). Digelapkan agar garis kontrol
+     memenuhi WCAG 1.4.11 (minimal 3:1); lihat docs/design-gaps.md. */
+  --color-kotak: #64748b;
+
+  /* Aksen */
+  --color-aksen: #4f46e5;
+  --color-aksen-kuat: #4338ca;
+  --color-aksen-lembut: #eef2ff;
+
+  /* Rekam dan bahaya */
+  --color-rekam: #e5484d;
+  --color-rekam-lembut: #f4a3a6;
+  --color-bahaya: #dc2626;
+  --color-bahaya-teks: #b91c1c;
+
+  /* Kategori */
+  --color-rapat-latar: #eef2ff;
+  --color-rapat-teks: #4338ca;
+  --color-kuliah-latar: #f0fdfa;
+  --color-kuliah-teks: #0f766e;
+  --color-ide-latar: #fffbeb;
+  --color-ide-teks: #92400e;
+
+  /* Status */
+  --color-selesai-latar: #f0fdf4;
+  --color-selesai-teks: #166534;
+  --color-memproses-latar: #fffbeb;
+  --color-memproses-teks: #92400e;
+  --color-gagal-latar: #fef2f2;
+  --color-gagal-teks: #b91c1c;
+
+  /* Tipografi: ukuran/tinggi baris */
+  --text-kecil: 13px;
+  --text-kecil--line-height: 18px;
+  --text-isi: 16px;
+  --text-isi--line-height: 24px;
+  --text-judul: 18px;
+  --text-judul--line-height: 28px;
+  --text-utama: 24px;
+  --text-utama--line-height: 32px;
+  --text-timer: 48px;
+  --text-timer--line-height: 64px;
+
+  /* Sudut */
+  --radius-kartu: 12px;
+  --radius-kontrol: 8px;
+  --radius-segmen: 10px;
+  --radius-centang: 6px;
+
+  /* Bayangan */
+  --shadow-rekam: 0 4px 6px rgba(229, 72, 77, 0.18);
+
+  /* Gerak */
+  --animate-putar: putar 0.9s linear infinite;
+  --animate-kedip: kedip 1.2s ease-in-out infinite alternate;
+  --animate-gelombang: gelombang 0.7s ease-in-out infinite alternate;
+
+  @keyframes putar {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  @keyframes kedip {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0.35;
+    }
+  }
+  @keyframes gelombang {
+    from {
+      height: var(--tinggi-awal);
+    }
+    to {
+      height: var(--tinggi-akhir);
+    }
+  }
+}
+
+html {
+  background: var(--color-latar);
+}
+
+body {
+  background: var(--color-latar);
+  color: var(--color-tinta);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 24px;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-aksen);
+  outline-offset: 2px;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+/* Hormati prefers-reduced-motion: gelombang suara, indikator merekam, spinner. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
