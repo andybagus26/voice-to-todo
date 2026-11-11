@@ -102,12 +102,11 @@ Hal lain yang ditambahkan dan tidak terlihat di Figma:
 
 ## Batasan yang diketahui
 
-- **Transkripsi bawaan masih tiruan.** `TRANSCRIBE_PROVIDER=mock` mengabaikan audio dan mengembalikan
-  transkrip contoh. Claude API tidak punya blok input audio, jadi dipakai penyedia terpisah. Adapter
-  untuk API berformat OpenAI (`openai`, `groq`) sudah ada di `server/transcribe.ts`, tetapi belum
-  pernah dijalankan terhadap API asli.
-- **Ringkasan belum pernah memanggil API asli**, baik Groq (`openai/gpt-oss-120b`) maupun Claude.
-  Logikanya diuji dengan klien tiruan.
+- **Penyedia AI.** Claude API tidak punya blok input audio, jadi transkripsi memakai penyedia
+  terpisah. Groq (`whisper-large-v3` dan `openai/gpt-oss-120b`) sudah dicoba dengan API asli dan
+  berjalan. Adapter Claude (ringkasan) dan OpenAI (transkripsi) baru diuji dengan klien tiruan.
+- **Salah dengar transkripsi** ikut terbawa ke ringkasan. Pada uji dengan suara sintesis, "dana"
+  terdengar "Dena" dan ringkasan menyebut seolah ada orang bernama Dena.
 - **Tier gratis Groq** punya batas permintaan. Bila habis, server membalas 429 dan kartu Gagal
   menampilkan "Terlalu banyak permintaan".
 - **Batas 10 menit di server** baru ditegakkan lewat ukuran berkas (8 MB) dan durasi yang dilaporkan
@@ -121,6 +120,5 @@ Hal lain yang ditambahkan dan tidak terlihat di Figma:
 
 ## Belum diuji di perangkat sungguhan
 
-- Safari dan iOS: fallback rekaman MP4 hanya diuji lewat unit test pemilihan format.
 - Perekaman saat layar terkunci atau tab di latar belakang (iOS bisa menjeda mikrofon).
 - Pembaca layar sungguhan (VoiceOver, TalkBack): yang diuji adalah audit axe dan navigasi keyboard.

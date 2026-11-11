@@ -61,8 +61,8 @@ Tier gratis punya batas pemakaian; bila habis, aplikasi menampilkan "Terlalu ban
 Dengan penyedia `mock`, audio diabaikan dan hasilnya selalu contoh "Rapat panitia". Di produksi,
 penyedia tiruan ditolak (HTTP 503) kecuali `ALLOW_MOCK_AI=1`.
 
-Status: panggilan ke Groq, Claude API, dan OpenAI **belum pernah dijalankan** terhadap API asli;
-semuanya baru diuji dengan klien tiruan.
+Status: alur Groq (transkripsi dan ringkasan) sudah dicoba dengan API asli, termasuk merekam dari
+iPhone (Safari, audio MP4). Adapter Claude dan OpenAI baru diuji dengan klien tiruan.
 
 ## Cara kerja
 
