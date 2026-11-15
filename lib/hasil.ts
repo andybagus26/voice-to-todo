@@ -42,5 +42,6 @@ export type KodeGalat = (typeof KODE_GALAT)[number];
 /** Batas yang ditegakkan di klien dan di server. */
 export const MAKS_DURASI_MS = 10 * 60 * 1000;
 export const TOLERANSI_DURASI_MS = 5_000;
-export const MAKS_UKURAN_AUDIO = 8 * 1024 * 1024;
+/** 4 MB: di bawah batas badan permintaan Vercel Functions (4,5 MB). Rekaman 10 menit pada 32 kbps sekitar 2,4 MB. */
+export const MAKS_UKURAN_AUDIO = 4 * 1024 * 1024;
 export const TIPE_AUDIO_DITERIMA = ["audio/webm", "audio/mp4", "audio/ogg"] as const;

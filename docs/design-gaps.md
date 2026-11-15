@@ -109,7 +109,7 @@ Hal lain yang ditambahkan dan tidak terlihat di Figma:
   terdengar "Dena" dan ringkasan menyebut seolah ada orang bernama Dena.
 - **Tier gratis Groq** punya batas permintaan. Bila habis, server membalas 429 dan kartu Gagal
   menampilkan "Terlalu banyak permintaan".
-- **Batas 10 menit di server** baru ditegakkan lewat ukuran berkas (8 MB) dan durasi yang dilaporkan
+- **Batas 10 menit di server** baru ditegakkan lewat ukuran berkas (4 MB, di bawah batas 4,5 MB Vercel) dan durasi yang dilaporkan
   browser. Penegakan dari durasi audio sebenarnya sudah ada di kode, tetapi baru berlaku setelah ada
   penyedia transkripsi asli yang melaporkan durasi.
 - **Pembatas permintaan** (10 per 10 menit per alamat IP) disimpan di memori satu proses. Di hosting
